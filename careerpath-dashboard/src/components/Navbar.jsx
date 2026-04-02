@@ -1,7 +1,7 @@
 import React from 'react';
 import { User, GraduationCap } from 'lucide-react';
 
-const Navbar = ({ onStartAssessment }) => {
+const Navbar = ({ onStartAssessment, onOpenExplorer }) => {
   return (
     <nav className="flex items-center justify-between px-8 py-5 border-b border-white/5 bg-background">
       <div className="flex items-center gap-2">
@@ -11,7 +11,7 @@ const Navbar = ({ onStartAssessment }) => {
       
       <div className="hidden md:flex items-center gap-6 text-sm text-textMuted">
         <button onClick={onStartAssessment} className="hover:text-textMain transition-colors">Subject Advisor</button>
-        <a href="#" className="hover:text-textMain transition-colors">College Explorer</a>
+        <button onClick={onOpenExplorer} className="hover:text-textMain transition-colors">College Explorer</button>
         <a href="#" className="hover:text-textMain transition-colors">Career Outcomes</a>
         <a href="#" className="hover:text-textMain transition-colors">Resources</a>
         <a href="#" className="hover:text-textMain transition-colors">Scholarships</a>
