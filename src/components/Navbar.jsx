@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { GraduationCap, Menu, X, LogOut, ChevronDown, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-const Navbar = ({ onStartAssessment, onOpenSignIn, onOpenSignUp }) => {
+const Navbar = ({ onStartAssessment, onOpenSignIn, onOpenSignUp, onOpenExplorer }) => {
   const { user, logOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -14,7 +14,7 @@ const Navbar = ({ onStartAssessment, onOpenSignIn, onOpenSignUp }) => {
 
   const navLinks = [
     { label: 'Subject Advisor', onClick: () => { onStartAssessment(); setMobileOpen(false); } },
-    { label: 'College Explorer', onClick: null },
+    { label: 'College Explorer', onClick: () => { if(onOpenExplorer) onOpenExplorer(); setMobileOpen(false); } },
     { label: 'Career Outcomes', onClick: null },
     { label: 'Resources', onClick: null },
     { label: 'Scholarships', onClick: null },

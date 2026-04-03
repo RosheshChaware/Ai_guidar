@@ -14,10 +14,13 @@
     "dotenv": "^17.4.0",
     "express": "^5.2.1",
     "firebase": "^12.11.0",
+    "leaflet": "^1.9.4",
     "lucide-react": "^1.7.0",
+    "luxon": "^3.7.2",
     "nodemailer": "^8.0.4",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react-dom": "^19.2.4",
+    "react-leaflet": "^5.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

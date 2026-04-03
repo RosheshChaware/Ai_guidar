@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, ArrowRight, Sparkles, BrainCircuit } from 'lucide-react';
 import ProgressBar from './ProgressBar';
 import QuestionStep from './QuestionStep';
 import RecommendationCard from './RecommendationCard';
@@ -122,6 +122,7 @@ const BADGES = ['Best Match', 'Great Option', 'Alternative Path'];
 
 const SubjectAdvisorPage = ({ onClose }) => {
   const [stepIndex, setStepIndex] = useState(0);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [answers, setAnswers] = useState({
     subjects: [],
     career: [],
@@ -178,7 +179,15 @@ const SubjectAdvisorPage = ({ onClose }) => {
   ];
 
   const handleNext = () => {
-    if (stepIndex < steps.length) setStepIndex(stepIndex + 1);
+    if (stepIndex < steps.length - 1) {
+      setStepIndex(stepIndex + 1);
+    } else if (stepIndex === steps.length - 1) {
+      setIsGenerating(true);
+      setTimeout(() => {
+        setIsGenerating(false);
+        setStepIndex(stepIndex + 1);
+      }, 2000);
+    }
   };
 
   const handleBack = () => {
@@ -191,7 +200,27 @@ const SubjectAdvisorPage = ({ onClose }) => {
     setAnswers({ ...answers, [currentStepId]: selectedOptions });
   };
 
-  const isNextDisabled = !answers[steps[stepIndex]?.id]?.length;
+  const isNextDisabled = !isGenerating && !answers[steps[stepIndex]?.id]?.length;
+
+  if (isGenerating) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-8">
+        <div className="relative">
+          <div className="absolute inset-0 bg-primary/20 rounded-full blur-3xl animate-pulse" />
+          <BrainCircuit className="w-20 h-20 text-primary relative animate-bounce" />
+        </div>
+        <h2 className="text-3xl font-bold mt-12 mb-4 animate-pulse">Personalizing Your Future...</h2>
+        <p className="text-textMuted text-lg max-w-md text-center">
+          Our AI is analyzing your interests, strengths, and goals to find the perfect educational path for you.
+        </p>
+        <div className="mt-12 flex gap-2">
+          <div className="w-3 h-3 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
+          <div className="w-3 h-3 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
+          <div className="w-3 h-3 bg-primary rounded-full animate-bounce" />
+        </div>
+      </div>
+    );
+  }
 
   // ── Results page ──────────────────────────────────────────────────────────
   if (stepIndex >= steps.length) {
