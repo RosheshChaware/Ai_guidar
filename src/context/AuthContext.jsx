@@ -34,16 +34,45 @@ export const AuthProvider = ({ children }) => {
     return cred.user;
   };
 
+  const sendLoginAlert = async (user) => {
+    try {
+      console.log('[Frontend] Initiating Login Alert for:', user.email);
+      const response = await fetch('http://localhost:5000/send-login-alert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user.email,
+          displayName: user.displayName || 'User',
+          userAgent: navigator.userAgent
+        })
+      });
+      
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || `HTTP error status: ${response.status}`);
+      }
+      
+      console.log('[Frontend] Login alert API call successful:', data);
+    } catch (err) {
+      console.error('[Frontend] Error sending login alert API call:', err.message);
+    }
+  };
+
   const signIn = async (email, password) => {
     const cred = await signInWithEmailAndPassword(auth, email, password);
     if (!cred.user.emailVerified) {
       await signOut(auth);
       throw Object.assign(new Error('email-not-verified'), { code: 'auth/email-not-verified' });
     }
+    await sendLoginAlert(cred.user);
     return cred;
   };
 
-  const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
+  const signInWithGoogle = async () => {
+    const cred = await signInWithPopup(auth, googleProvider);
+    await sendLoginAlert(cred.user);
+    return cred;
+  };
 
   const resendVerificationEmail = async (email, password) => {
     // Re-sign in temporarily to get the user object, then send email
@@ -59,6 +88,7 @@ export const AuthProvider = ({ children }) => {
     if (cred.user.emailVerified) {
       // Keep the user signed in
       setUser(cred.user);
+      await sendLoginAlert(cred.user);
       return true;
     }
     await signOut(auth);

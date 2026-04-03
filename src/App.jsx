@@ -21,7 +21,8 @@ function App() {
   const [showLearningPage, setShowLearningPage] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
-  const [authMode, setAuthMode] = useState('signin'); // 'signin' | 'signup'
+  const [authMode, setAuthMode] = useState('signin');
+  const [aiResult, setAiResult] = useState(null); // holds fresh AI result after analysis
 
   const openAuth = (mode = 'signin') => {
     setAuthMode(mode);
@@ -103,7 +104,8 @@ function App() {
     return (
       <OnboardingFlow
         userId={user?.uid}
-        onComplete={() => {
+        onComplete={(payload) => {
+          setAiResult(payload);        // store fresh AI result in memory
           setShowOnboarding(false);
           setShowLearningPage(true);
         }}
@@ -113,7 +115,16 @@ function App() {
   }
 
   if (showLearningPage) {
-    return <PersonalizedLearningPage onClose={closeLearningPage} />;
+    return <PersonalizedLearningPage
+      aiResult={aiResult}          // pass fresh result or null for returning users
+      onClose={closeLearningPage}
+      onReanalyze={() => {
+        if (user) localStorage.removeItem(`onboarding_complete_${user.uid}`);
+        setAiResult(null);          // clear cached result so dashboard re-fetches
+        setShowLearningPage(false);
+        setShowOnboarding(true);
+      }}
+    />;
   }
 
   return (
