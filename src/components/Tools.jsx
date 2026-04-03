@@ -1,27 +1,31 @@
 import React from 'react';
 import { Book, GraduationCap, TrendingUp, NotebookTabs } from 'lucide-react';
 
-const Tools = () => {
+const Tools = ({ onOpenExplorer, onOpenCareerOutcomes }) => {
   const tools = [
     {
       icon: <Book className="w-6 h-6 text-primary" />,
       title: "Subject Advisor",
-      description: "Get personalized recommendations for subject combinations based on your interests and career goals."
+      description: "Get personalized recommendations for subject combinations based on your interests and career goals.",
+      onClick: null // Could map to subject advisor if needed
     },
     {
       icon: <GraduationCap className="w-6 h-6 text-primary" />,
       title: "College Explorer",
-      description: "Discover local government colleges, courses, and admission requirements tailored to your preferences."
+      description: "Discover local government colleges, courses, and admission requirements tailored to your preferences.",
+      onClick: onOpenExplorer
     },
     {
       icon: <TrendingUp className="w-6 h-6 text-primary" />,
       title: "Career Outcomes",
-      description: "Understand job prospects, salary expectations, and skill requirements for different career paths."
+      description: "Understand job prospects, salary expectations, and skill requirements for different career paths.",
+      onClick: onOpenCareerOutcomes
     },
     {
       icon: <NotebookTabs className="w-6 h-6 text-primary" />,
       title: "Resource Library",
-      description: "Access free e-books, study materials, and skill development resources to support your journey."
+      description: "Access free e-books, study materials, and skill development resources to support your journey.",
+      onClick: null
     }
   ];
 
@@ -36,7 +40,11 @@ const Tools = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-7xl">
         {tools.map((tool, index) => (
-          <div key={index} className="glass-card rounded-2xl p-8 flex flex-col">
+          <div 
+            key={index} 
+            onClick={tool.onClick}
+            className={`glass-card rounded-2xl p-8 flex flex-col ${tool.onClick ? 'cursor-pointer hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/5 transition-all duration-300' : ''}`}
+          >
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6">
               {tool.icon}
             </div>

@@ -8,12 +8,14 @@ import SubjectAdvisorPage from './components/SubjectAdvisorPage';
 import CollegeExplorerPage from './components/CollegeExplorerPage';
 import AuthPage from './components/auth/AuthPage';
 import { useAuth } from './context/AuthContext';
+import CareerOutcomesPage from './components/CareerOutcomesPage';
 
 function App() {
   const { user } = useAuth();
 
   const [showAssessment, setShowAssessment] = useState(false);
   const [showCollegeExplorer, setShowCollegeExplorer] = useState(false);
+  const [showCareerOutcomes, setShowCareerOutcomes] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [authMode, setAuthMode] = useState('signin'); // 'signin' | 'signup'
 
@@ -38,12 +40,19 @@ function App() {
   const openCollegeExplorer = () => setShowCollegeExplorer(true);
   const closeCollegeExplorer = () => setShowCollegeExplorer(false);
 
+  const openCareerOutcomes = () => setShowCareerOutcomes(true);
+  const closeCareerOutcomes = () => setShowCareerOutcomes(false);
+
   if (showAssessment) {
     return <SubjectAdvisorPage onClose={closeAssessment} />;
   }
 
   if (showCollegeExplorer) {
     return <CollegeExplorerPage onClose={closeCollegeExplorer} />;
+  }
+
+  if (showCareerOutcomes) {
+    return <CareerOutcomesPage onClose={closeCareerOutcomes} />;
   }
 
   return (
@@ -55,13 +64,14 @@ function App() {
       <Navbar
         onStartAssessment={openAssessment}
         onOpenExplorer={openCollegeExplorer}
+        onOpenCareerOutcomes={openCareerOutcomes}
         onOpenSignIn={() => openAuth('signin')}
         onOpenSignUp={() => openAuth('signup')}
       />
       <Hero onStartAssessment={openAssessment} />
       <FeatureCards onStartAssessment={openAssessment} />
       <Statistics />
-      <Tools onOpenExplorer={openCollegeExplorer} />
+      <Tools onOpenExplorer={openCollegeExplorer} onOpenCareerOutcomes={openCareerOutcomes} />
 
       {/* Auth modal */}
       {showAuth && (
