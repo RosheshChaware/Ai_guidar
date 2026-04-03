@@ -23,7 +23,7 @@ const AITutorChat = ({ aiResult }) => {
     setLoading(true);
 
     try {
-      const res = await fetch('http://localhost:5000/api/roadmap/chat', {
+      const res = await fetch('http://localhost:5000/api/v1/roadmap/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -35,13 +35,25 @@ const AITutorChat = ({ aiResult }) => {
           }
         })
       });
+      
+      const DEV_MODE = true;
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        console.error(`[API ERROR /roadmap/chat] Status: ${res.status}`, errData);
+        setMessages([
+          ...newMsgs, 
+          { role: 'model', content: DEV_MODE ? `[DEV_MODE]: Expected error intercepted. API generated a ${res.status} response: ${errData.error?.message || errData.error || 'Unknown'}` : 'Sorry, I am having trouble connecting to my service. Please try again later.' }
+        ]);
+        return;
+      }
+
       const data = await res.json();
       if (data.reply) {
         setMessages([...newMsgs, { role: 'model', content: data.reply }]);
       }
     } catch (err) {
-      console.error(err);
-      setMessages([...newMsgs, { role: 'model', content: 'Sorry, I am having trouble connecting to the network right now.' }]);
+      console.error('[Network/Parsing Error]', err);
+      setMessages([...newMsgs, { role: 'model', content: 'Network issue: Could not fetch response.' }]);
     } finally {
       setLoading(false);
     }

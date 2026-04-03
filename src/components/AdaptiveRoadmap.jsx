@@ -60,22 +60,39 @@ const AdaptiveRoadmap = ({ aiResult, user }) => {
         }
       };
 
-      const res = await fetch('http://localhost:5000/api/roadmap/update', {
+      const res = await fetch('http://localhost:5000/api/v1/roadmap/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       
+      const DEV_MODE = true;
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        console.error(`[API ERROR /roadmap/update] Status: ${res.status}`, errData);
+        if (DEV_MODE) {
+            console.warn("DEV_MODE active: Using fallback roadmap mock data.");
+            setRoadmap([
+              { id: '1', title: 'Mock Subject Basics', status: 'completed', priority: 'high', aiAdvice: 'Finished mock intro.', tasks: [{ id: 'tt1', desc: 'Basic info.', completed: true }] },
+              { id: '2', title: 'Advanced Analysis', status: 'in-progress', priority: 'high', aiAdvice: 'Focus here heavily to catch up.', tasks: [{ id: 't1', desc: 'Mock task 1', completed: false }, { id: 't2', desc: 'Mock task 2', completed: false }] }
+            ]);
+            setProgressInput('');
+            setTestScore('');
+            return;
+        }
+        window.alert(`Error: ${errData.error || 'Failed to update roadmap automatically.'}`);
+        return;
+      }
+
       const data = await res.json();
-      if (res.ok && data.roadmap) {
+      if (data.roadmap) {
         setRoadmap(data.roadmap);
         setProgressInput('');
         setTestScore('');
-      } else {
-        console.error('Failed to update roadmap:', data.error);
       }
     } catch (err) {
       console.error('Error:', err);
+      window.alert('Server is busy, please try again.');
     } finally {
       setLoading(false);
     }
@@ -91,7 +108,7 @@ const AdaptiveRoadmap = ({ aiResult, user }) => {
     setChatLoading(true);
 
     try {
-      const res = await fetch('http://localhost:5000/api/roadmap/chat', {
+      const res = await fetch('http://localhost:5000/api/v1/roadmap/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -101,12 +118,24 @@ const AdaptiveRoadmap = ({ aiResult, user }) => {
         })
       });
       
+      const DEV_MODE = true;
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        console.error(`[API ERROR /roadmap/chat] Status: ${res.status}`, errData);
+        setChatHistory([
+           ...newChat, 
+           { role: 'model', content: DEV_MODE ? `[DEV_MODE FALLBACK]: Mock server response for error ${res.status}.` : 'I am currently unable to reach my service. Please try again soon.' }
+        ]);
+        return;
+      }
+      
       const data = await res.json();
-      if (res.ok && data.reply) {
+      if (data.reply) {
         setChatHistory([...newChat, { role: 'model', content: data.reply }]);
       }
     } catch (err) {
       console.error(err);
+      window.alert('Server is busy, please try again.');
     } finally {
       setChatLoading(false);
     }

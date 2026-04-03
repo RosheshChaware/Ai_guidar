@@ -37,7 +37,7 @@ export const AuthProvider = ({ children }) => {
   const sendLoginAlert = async (user) => {
     try {
       console.log('[Frontend] Initiating Login Alert for:', user.email);
-      const response = await fetch('http://localhost:5000/send-login-alert', {
+      const response = await fetch('http://localhost:5000/api/v1/auth/send-login-alert', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

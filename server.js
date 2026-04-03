@@ -3,195 +3,159 @@ import cors from 'cors';
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import helmet from 'helmet';
+import xss from 'xss';
 
 dotenv.config();
 
-// Initialize Gemini API
+// Secure backend-only API key usage
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 const app = express();
-app.use(cors());
-app.use(express.json());
 
-// Set up Nodemailer transporter
+// ── SECURITY MIDDLEWARE ──
+app.use(helmet()); 
+app.use(cors());
+app.use(express.json({ limit: '5mb' })); 
+app.use(express.urlencoded({ limit: '5mb', extended: true }));
+
+// Rate Limiting temporarily removed for development phase
+
+// ── NODEMAILER ──
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // Needs to be App Password
+    pass: process.env.EMAIL_PASS,
   },
 });
 
-app.post('/send-login-alert', async (req, res) => {
-  console.log('\n[Backend] ---> Received POST to /send-login-alert');
-  console.log('[Backend] Request body:', req.body);
-  
-  const { email, displayName, userAgent } = req.body;
-
-  if (!email) {
-    console.error('[Backend] Error: Email address was completely missing from request body!');
-    return res.status(400).json({ error: 'Email is required' });
+// ── UTILITIES ──
+const sanitizeData = (data) => {
+  if (typeof data === 'string') return xss(data.trim());
+  if (Array.isArray(data)) return data.map(item => sanitizeData(item));
+  if (typeof data === 'object' && data !== null) {
+    const sanitizedObj = {};
+    for (const key in data) sanitizedObj[key] = sanitizeData(data[key]);
+    return sanitizedObj;
   }
+  return data;
+};
 
-  const nameToUse = displayName || 'User';
-  const currentDate = new Date().toLocaleString();
-  console.log(`[Backend] Preparing email for: ${email} (Name: ${nameToUse})`);
+// ── MEMORY CACHE (SAVES API QUOTA) ──
+const apiCache = new Map();
+const getCacheKey = (endpoint, bodyPayload) => `${endpoint}_${JSON.stringify(bodyPayload || {})}`;
 
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to: email,
-    subject: 'Security Alert: New Login to CareerPath',
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-        <h2 style="color: #4f46e5;">New Login Detected</h2>
-        <p>Hi <b>${nameToUse}</b>,</p>
-        <p>You have successfully logged in to your CareerPath account.</p>
-        <div style="background-color: #f8fafc; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          <p style="margin: 0 0 10px 0;"><strong>Time:</strong> ${currentDate}</p>
-          <p style="margin: 0;"><strong>Device/Browser Info:</strong> ${userAgent || 'Unknown device'}</p>
-        </div>
-        <p>If this was you, you can safely ignore this email.</p>
-        <p>If you did not log in, please reset your password immediately and contact support.</p>
-        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-        <p style="font-size: 12px; color: #666;">This is an automated message, please do not reply.</p>
-      </div>
-    `,
-  };
+// ── API ROUTES (V1) ──
 
+app.post('/api/v1/auth/send-login-alert', async (req, res) => {
   try {
+    const { email, displayName, userAgent } = sanitizeData(req.body);
+
+    if (!email) return res.status(400).json({ error: 'Valid email is required' });
+
+    const nameToUse = displayName || 'User';
+    const currentDate = new Date().toLocaleString();
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Security Alert: New Login to CareerPath',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+          <h2 style="color: #4f46e5;">New Login Detected</h2>
+          <p>Hi <b>${nameToUse}</b>,</p>
+          <p>You have successfully logged in to your CareerPath account.</p>
+          <div style="background-color: #f8fafc; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p style="margin: 0 0 10px 0;"><strong>Time:</strong> ${currentDate}</p>
+            <p style="margin: 0;"><strong>Device/Browser Info:</strong> ${userAgent || 'Unknown device'}</p>
+          </div>
+          <p>If this was you, you can safely ignore this email.</p>
+          <p>If you did not log in, please reset your password immediately and contact support.</p>
+          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+          <p style="font-size: 12px; color: #666;">This is an automated message, please do not reply.</p>
+        </div>
+      `,
+    };
+
     const info = await transporter.sendMail(mailOptions);
-    console.log('Login alert email sent successfully:', info.response);
+    console.log('Login alert email sent successfully');
     res.status(200).json({ message: 'Login alert email sent' });
   } catch (error) {
-    console.error('Error sending email:', error);
-    res.status(500).json({ error: 'Failed to send login alert email', details: error.message });
+    console.error('Error in send-login-alert:', error.message);
+    res.status(500).json({ error: 'Failed to send login alert. System error.' });
   }
 });
 
-app.post('/api/analyze', async (req, res) => {
-  console.log('\n[Backend] ---> Received POST to /api/analyze');
+app.post('/api/v1/analyze', async (req, res) => {
   try {
-    const { inputData } = req.body;
-    if (!inputData) return res.status(400).json({ error: 'Input data is required' });
-    if (!process.env.GEMINI_API_KEY) return res.status(500).json({ error: 'Gemini API is not configured' });
+    const payload = sanitizeData(req.body);
+    const { inputData } = payload;
+    if (!inputData) return res.status(400).json({ error: 'Input form data is required' });
+    if (!process.env.GEMINI_API_KEY) return res.status(500).json({ error: 'System AI config is missing' });
+
+    // File Upload Security Check
+    if (inputData.uploadedFileData) {
+        const allowedTypes = ['data:image/jpeg', 'data:image/png', 'data:image/jpg', 'data:application/pdf'];
+        const isValid = allowedTypes.some(type => inputData.uploadedFileData.startsWith(type));
+        if (!isValid) return res.status(400).json({ error: 'Invalid file format. Only JPG, PNG, and PDF are allowed.' });
+    }
+
+    const cacheKey = getCacheKey('analyze_profile', { formData: inputData, hasFile: !!inputData.uploadedFileData });
+    if (apiCache.has(cacheKey)) {
+        console.log('[Cache Hit] Returning cached /analyze data to save API Quota.');
+        return res.status(200).json(apiCache.get(cacheKey));
+    }
 
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.5-flash',
       generationConfig: { responseMimeType: 'application/json' },
     });
 
-    // Build enriched context string from all input fields
     const buildContext = (d) => {
-      const lines = [];
-      lines.push(`CLASS: ${d.currentClass || 'N/A'}`);
-      lines.push(`STREAM: ${d.stream || 'N/A'}`);
-      lines.push(`GOAL / PURSUIT: ${d.targetGoal || 'N/A'}`);
-      lines.push(`LANGUAGE: ${d.language || 'English'}`);
-      lines.push(`ADAPTIVE SUBJECTS FOR GOAL: ${(d.adaptiveSubjects || []).join(', ') || 'General'}`);
-
-      // Strengths
-      const strong = (d.strongSubjectsAll || d.strongSubjects || []);
-      lines.push(`STRONG SUBJECTS: ${strong.join(', ') || 'Not specified'}`);
-
-      // Weaknesses
-      const weak = (d.weakSubjectsAll || d.weakSubjects || []);
-      lines.push(`WEAK SUBJECTS: ${weak.join(', ') || 'Not specified'}`);
-
-      if (d.biggestChallenge) lines.push(`BIGGEST CHALLENGE (student's own words): "${d.biggestChallenge}"`);
-      lines.push(`CONFIDENCE LEVEL: ${d.confidence || 'N/A'}`);
-
-      // Study habits
-      lines.push(`DAILY STUDY HOURS: ${d.studyHours || 'N/A'}`);
-      lines.push(`PREFERRED STUDY TIME: ${d.studyTime || 'N/A'}`);
-      lines.push(`STUDY METHOD: ${d.practiceStyleAll || d.practiceStyle || 'N/A'}`);
-      if (d.resources?.length) lines.push(`RESOURCES USED: ${d.resources.join(', ')}`);
-
-      // Multi-subject performance
-      if (d.subjectEntries?.length) {
-        lines.push('PERFORMANCE DATA (multi-subject):');
-        d.subjectEntries.forEach((e, i) => {
-          if (e.subject) {
-            lines.push(`  ${i + 1}. Subject: ${e.subject} | Score: ${e.score || 'N/A'}% | Correct: ${e.correctQ || 'N/A'} | Wrong: ${e.incorrectQ || 'N/A'}`);
-          }
-        });
-      } else {
-        // legacy single subject
-        lines.push(`TEST SUBJECT: ${d.perfSubject || 'N/A'} | SCORE: ${d.testScore || 'N/A'}% | CORRECT: ${d.correctQ || 'N/A'} | WRONG: ${d.incorrectQ || 'N/A'}`);
-      }
-
-      // Weak topics
-      const weakTopics = (d.weakTopicsAll || d.weakTopics || []);
-      lines.push(`WEAK TOPICS: ${weakTopics.join(', ') || 'Not specified'}`);
-      lines.push(`MISTAKE TYPE: ${d.mistakeTypeAll || d.mistakeType || 'N/A'}`);
-
-      if (d.hasFileUpload) lines.push('NOTE: Student uploaded a test result image. Factor this into your analysis as additional performance evidence.');
-
+      const lines = [
+        `CLASS: ${d.currentClass}`,
+        `STREAM: ${d.stream}`,
+        `GOAL: ${d.targetGoal}`,
+        `LANGUAGE: ${d.language}`,
+        `STRONG: ${(d.strongSubjectsAll || []).join()}`,
+        `WEAK: ${(d.weakSubjectsAll || []).join()}`,
+        `WEAK TOPICS: ${(d.weakTopicsAll || []).join()}`,
+        `CHALLENGE: ${d.biggestChallenge}`,
+        `CONFIDENCE: ${d.confidence}`
+      ];
+      if (d.hasFileUpload) lines.push('NOTE: Student uploaded a test result document. Use it as added performance evidence.');
       return lines.join('\n');
     };
 
-    const SYSTEM_PROMPT = `You are ShikshaSetu AI — an advanced academic and career intelligence system built for Indian students.
-
-Your role: Think like a REAL MENTOR who deeply understands this student. Do NOT repeat their inputs mechanically. INFER patterns, habits, and hidden issues from the data.
-
-IMPORTANT INTELLIGENCE RULES:
-1. Use ONLY the subjects relevant to the student's goal and stream (given in ADAPTIVE SUBJECTS).
-2. infer subject scores using: test scores, correct/wrong ratio, confidence, study hours, mistake type, weak topics.
-3. Do NOT give the same score to all subjects. Show realistic variation (e.g. 45, 67, 82, 71).
-4. If student mentions custom "Other:" subjects or topics, include them in your analysis.
-5. Read the BIGGEST CHALLENGE field carefully — it reveals real pain points beyond structured options.
-6. learningStyle: "visual" | "practice-based" | "theory-based" | "mixed"
-7. consistencyLevel: "low" | "moderate" | "high"
-8. focusLevel: "low" | "medium" | "high"
-9. Return EXACTLY 3 career suggestions suited to Indian context.
-10. actionPlan steps must be concrete (5–7 words each), not generic.
-11. insights must sound like a mentor speaking to the student directly.
-12. Output STRICT VALID JSON only. No markdown, no extra text.
-
-OUTPUT FORMAT:
+    const SYSTEM_PROMPT = `You are an advanced academic AI. Predict subjects, learning styles, and careers accurately for an Indian high school audience.
+Output EXACT STRICT JSON ONLY with the following structure:
 {
   "strongSubjects": [{"subject": "", "confidence": 0, "reason": ""}],
   "weakSubjects": [{"subject": "", "confidence": 0, "reason": ""}],
   "subjectScores": [{"subject": "", "score": 0}],
-  "learningProfile": {
-    "learningStyle": "",
-    "consistencyLevel": "",
-    "focusLevel": ""
-  },
+  "learningProfile": { "learningStyle": "", "consistencyLevel": "", "focusLevel": "" },
   "learningIssues": [{"type": "", "severity": "low|medium|high", "reason": ""}],
-  "recommendedFocus": [{
-    "subject": "",
-    "priority": "high|medium|low",
-    "reason": "",
-    "actionPlan": ["step 1", "step 2", "step 3"]
-  }],
+  "recommendedFocus": [{ "subject": "", "priority": "high|medium|low", "reason": "", "actionPlan": ["step 1", "step 2"] }],
   "careerSuggestions": [{"career": "", "matchScore": 0, "reason": ""}],
-  "insights": {
-    "strengthSummary": "",
-    "weaknessSummary": "",
-    "overallAnalysis": ""
-  }
+  "insights": { "strengthSummary": "", "weaknessSummary": "", "overallAnalysis": "" }
 }`;
+    const prompt = `${SYSTEM_PROMPT}\n\n--- STUDENT DATA ---\n${buildContext(inputData)}`;
 
-    const studentContext = buildContext(inputData);
-    const prompt = `${SYSTEM_PROMPT}\n\n--- STUDENT PROFILE DATA ---\n${studentContext}`;
-
-    console.log('[Backend] Sending to Gemini...');
     const result = await model.generateContent(prompt);
-    const responseText = result.response.text();
-    const jsonOutput = JSON.parse(responseText);
+    const jsonOutput = JSON.parse(result.response.text());
 
-    console.log('[Backend] AI response received, subjects:', jsonOutput.subjectScores?.map(s => s.subject));
+    apiCache.set(cacheKey, jsonOutput); // Save to cache
     res.status(200).json(jsonOutput);
-
   } catch (error) {
-    console.error('[Backend] Error in /api/analyze:', error.message);
-    res.status(500).json({ error: 'Failed to generate insights', details: error.message });
+    console.error('Error in /api/v1/analyze:', error.message);
+    res.status(500).json({ error: 'AI Processing Failed. Server is busy or limits reached.' });
   }
 });
-app.post('/api/roadmap/update', async (req, res) => {
-  console.log('\n[Backend] ---> Received POST to /api/roadmap/update');
+
+app.post('/api/v1/roadmap/update', async (req, res) => {
   try {
-    const { currentRoadmap, newProgress, userContext } = req.body;
+    const { currentRoadmap, newProgress, userContext } = sanitizeData(req.body);
     if (!newProgress) return res.status(400).json({ error: 'New progress data is required' });
     
     const model = genAI.getGenerativeModel({
@@ -199,159 +163,73 @@ app.post('/api/roadmap/update', async (req, res) => {
       generationConfig: { responseMimeType: 'application/json' },
     });
 
-    const prompt = `You are an AI Mentor updating a student's dynamic learning roadmap.
-    
-CURRENT CONTEXT: 
-${JSON.stringify(userContext || {})}
-
-CURRENT ROADMAP: 
-${JSON.stringify(currentRoadmap || {})}
-
-NEW USER PROGRESS / UPDATE:
-Experience: "${newProgress.experience || 'None'}"
-New Test Score: ${newProgress.testScore || 'N/A'}% in ${newProgress.subject || 'N/A'}
-
-TASK: Based on this new update, update the action steps, priorities, and sequence of the roadmap.
-1. If they struggled (e.g., low score or complaining about a topic), inject remedial immediate steps.
-2. If they did well, advance the roadmap schedule.
-3. Keep the output strictly in the original JSON format, returning a new array of roadmap milestones.
-
-OUTPUT STRICT JSON ARRAY FORMAT:
-[
-  {
-    "id": "1",
-    "title": "Topic or Goal",
-    "status": "pending|in-progress|completed",
-    "priority": "high|medium|low",
-    "tasks": [
-      { "id": "t1", "desc": "Concrete task", "completed": false }
-    ],
-    "aiAdvice": "Short contextual advice"
-  }
-]`;
-
+    const prompt = `You are an AI Mentor. Update roadmap in JSON given NEW PROGRESS: ${JSON.stringify(newProgress)} and CURRENT ROADMAP: ${JSON.stringify(currentRoadmap || {})}. Retain the strict array JSON format.`;
     const result = await model.generateContent(prompt);
+    
     res.status(200).json({ roadmap: JSON.parse(result.response.text()) });
   } catch (error) {
-    console.error('Error in /api/roadmap/update:', error);
-    res.status(500).json({ error: 'Failed to update roadmap' });
+    console.error('Error in /api/v1/roadmap/update:', error.message);
+    res.status(500).json({ error: 'Failed to update roadmap automatically.' });
   }
 });
 
-app.post('/api/roadmap/chat', async (req, res) => {
-  console.log('\n[Backend] ---> Received POST to /api/roadmap/chat');
+app.post('/api/v1/roadmap/chat', async (req, res) => {
   try {
-    const { message, context, history } = req.body;
-    
+    const { message, context, history } = sanitizeData(req.body);
+    if (!message) return res.status(400).json({ error: 'Message cannot be empty.' });
+
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.5-flash',
-      systemInstruction: `You are an intelligent AI mentor for students.
-
-You help with:
-* academic doubts
-* study strategies
-* roadmap guidance
-* career advice
-
-You have access to student data:
-* class
-* stream
-* goal
-* weak subjects
-* performance
-
-Instructions:
-1. Always give clear, simple explanations
-2. If user asks a doubt:
-   * explain concept step-by-step
-   * give example
-   * suggest practice method
-3. If user says "I am struggling":
-   * identify problem
-   * give solution
-   * suggest study technique
-4. If roadmap related:
-   * guide based on user's goal
-5. Keep answers:
-   * short but helpful
-   * actionable
-   * student-friendly
-6. Do NOT give generic answers
-7. If needed:
-   * break answer into steps
-   * give tips`,
+      systemInstruction: 'You are an intelligent AI mentor for students. Keep answers short, actionable, and student-friendly. Do NOT give generic answers.',
     });
 
     let chatHistory = (history || []).map(msg => ({
       role: msg.role === 'user' ? 'user' : 'model',
       parts: [{ text: msg.content }]
     }));
+    while (chatHistory.length > 0 && chatHistory[0].role === 'model') chatHistory.shift();
+    if (chatHistory.length > 0 && chatHistory[chatHistory.length - 1].role === 'user') chatHistory.pop();
 
-    // Gemini API STRICT RULE: History MUST start with a 'user' message and alternate.
-    // We must strip out the fake initial greeting from the frontend.
-    while (chatHistory.length > 0 && chatHistory[0].role === 'model') {
-      chatHistory.shift();
-    }
-    
-    // Also remove the very last message because that's the one we are actually sending via sendMessage!
-    if (chatHistory.length > 0 && chatHistory[chatHistory.length - 1].role === 'user') {
-      chatHistory.pop();
-    }
-
-    const chat = model.startChat({
-      history: chatHistory
-    });
-
-    const contextPrefix = context ? `[SYSTEM: Current User Context: Focus=${context.focus}, Weakness=${context.weakness}] ` : '';
+    const chat = model.startChat({ history: chatHistory });
+    const contextPrefix = context ? `[USER CONTEXT FOCUS: ${context.focus}] ` : '';
     const result = await chat.sendMessage(contextPrefix + message);
     
     res.status(200).json({ reply: result.response.text() });
   } catch (error) {
-    console.error('Error in /api/roadmap/chat:', error);
-    res.status(500).json({ error: 'Chat failed' });
+    console.error('Error in /api/v1/roadmap/chat:', error.message);
+    res.status(500).json({ error: 'Failed to connect to the Chat system.' });
   }
 });
-app.post('/api/career/details', async (req, res) => {
-  console.log('\n[Backend] ---> Received POST to /api/career/details');
+
+app.post('/api/v1/career/details', async (req, res) => {
   try {
-    const { career, userContext } = req.body;
-    if (!career) return res.status(400).json({ error: 'Career name is required' });
+    const { career, userContext } = sanitizeData(req.body);
+    if (!career) return res.status(400).json({ error: 'Career identifier is required' });
+
+    const cacheKey = getCacheKey('career_details', career);
+    if (apiCache.has(cacheKey)) {
+        console.log(`[Cache Hit] Returning cached career details for ${career} to avoid API limits.`);
+        return res.status(200).json(apiCache.get(cacheKey));
+    }
 
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.5-flash',
       generationConfig: { responseMimeType: 'application/json' },
     });
 
-    const prompt = `You are an expert Career Counselor for Indian students. The user wants deep details on the career: "${career}".
-    
-USER CONTEXT (To personalize advice):
-${JSON.stringify(userContext || {})}
-
-Generate a very detailed career profile in STRICT JSON. Include realistic statistics for the Indian market.
-JSON FORMAT MUST BE EXACTLY:
-{
-  "overview": "Detailed explanation of the role.",
-  "successRate": "e.g. 65%",
-  "failureRate": "e.g. 35%",
-  "competition": "High/Medium/Low",
-  "averageSalary": "e.g. ₹8LPA - ₹15LPA",
-  "growthPotential": "Description of industry growth.",
-  "topCompanies": ["Company 1", "Company 2"],
-  "roadmapSteps": ["Step 1", "Step 2", "Step 3"],
-  "technicalSkills": ["Skill 1", "Skill 2"],
-  "softSkills": ["Skill A", "Skill B"],
-  "learningResources": ["Resource 1", "Resource 2"]
-}`;
-
+    const prompt = `Provide advanced career metrics for: ${career}. STRICT JSON format exactly mapping: { "overview": "", "successRate": "", "failureRate": "", "competition": "", "averageSalary": "", "growthPotential": "", "topCompanies": [], "roadmapSteps": [], "technicalSkills": [], "softSkills": [], "learningResources": [] }`;
     const result = await model.generateContent(prompt);
-    res.status(200).json(JSON.parse(result.response.text()));
+    const jsonOutput = JSON.parse(result.response.text());
+
+    apiCache.set(cacheKey, jsonOutput); // Save to cache
+    res.status(200).json(jsonOutput);
   } catch (error) {
-    console.error('Error in /api/career/details:', error);
-    res.status(500).json({ error: 'Failed to fetch career details' });
+    console.error('Error in /api/v1/career/details:', error.message);
+    res.status(500).json({ error: 'Failed to retrieve advanced career metrics.' });
   }
 });
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`✅ Secure V1 Server is actively running on port ${PORT}`);
 });
