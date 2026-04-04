@@ -1,31 +1,42 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 import {
-  GraduationCap, Mail, Lock, User, Eye, EyeOff,
-  ArrowRight, Loader2, AlertCircle, CheckCircle2,
-  RefreshCw, MailCheck, ShieldCheck,
-} from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+  GraduationCap,
+  Mail,
+  Lock,
+  User,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
+  RefreshCw,
+  MailCheck,
+  ShieldCheck,
+} from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
 const INPUT_BASE =
-  'w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-textMuted focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all duration-200';
+  "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-textMuted focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all duration-200";
 
 const firebaseError = (code) => {
   const map = {
-    'auth/email-already-in-use': 'This email is already registered. Try signing in.',
-    'auth/invalid-email': 'Please enter a valid email address.',
-    'auth/weak-password': 'Password must be at least 6 characters.',
-    'auth/user-not-found': 'No account found with this email.',
-    'auth/wrong-password': 'Incorrect password. Please try again.',
-    'auth/invalid-credential': 'Invalid email or password.',
-    'auth/too-many-requests': 'Too many attempts. Please try again later.',
-    'auth/network-request-failed': 'Network error. Check your connection.',
-    'auth/email-not-verified': 'Please verify your email before login',
-    'auth/popup-closed-by-user': 'Google sign-in was cancelled.',
-    'auth/cancelled-popup-request': 'Only one sign-in window at a time.',
+    "auth/email-already-in-use":
+      "This email is already registered. Try signing in.",
+    "auth/invalid-email": "Please enter a valid email address.",
+    "auth/weak-password": "Password must be at least 6 characters.",
+    "auth/user-not-found": "No account found with this email.",
+    "auth/wrong-password": "Incorrect password. Please try again.",
+    "auth/invalid-credential": "Invalid email or password.",
+    "auth/too-many-requests": "Too many attempts. Please try again later.",
+    "auth/network-request-failed": "Network error. Check your connection.",
+    "auth/email-not-verified": "Please verify your email before login",
+    "auth/popup-closed-by-user": "Google sign-in was cancelled.",
+    "auth/cancelled-popup-request": "Only one sign-in window at a time.",
   };
-  return map[code] || 'Something went wrong. Please try again.';
+  return map[code] || "Something went wrong. Please try again.";
 };
 
 // ─── Google Button ────────────────────────────────────────────────────────────
@@ -42,10 +53,22 @@ const GoogleButton = ({ onClick, loading }) => (
     ) : (
       /* Google SVG logo */
       <svg className="w-4 h-4" viewBox="0 0 24 24">
-        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+        <path
+          fill="#4285F4"
+          d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+        />
+        <path
+          fill="#34A853"
+          d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+        />
+        <path
+          fill="#FBBC05"
+          d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+        />
+        <path
+          fill="#EA4335"
+          d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+        />
       </svg>
     )}
     <span>Continue with Google</span>
@@ -68,12 +91,17 @@ const PasswordField = ({ id, label, value, onChange, placeholder }) => {
   const [show, setShow] = useState(false);
   return (
     <div>
-      <label htmlFor={id} className="block text-xs font-medium text-textMuted mb-1.5">{label}</label>
+      <label
+        htmlFor={id}
+        className="block text-xs font-medium text-textMuted mb-1.5"
+      >
+        {label}
+      </label>
       <div className="relative">
         <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-textMuted pointer-events-none" />
         <input
           id={id}
-          type={show ? 'text' : 'password'}
+          type={show ? "text" : "password"}
           value={value}
           onChange={onChange}
           placeholder={placeholder}
@@ -109,7 +137,7 @@ const VerificationScreen = ({ email, password, onVerified, onBack }) => {
   const [checking, setChecking] = useState(false);
   const [resending, setResending] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const intervalRef = useRef(null);
 
@@ -123,7 +151,9 @@ const VerificationScreen = ({ email, password, onVerified, onBack }) => {
           setSuccess(true);
           setTimeout(() => onVerified(), 1200);
         }
-      } catch (_) { /* silent */ }
+      } catch (_) {
+        /* silent */
+      }
     }, 4000);
     return () => clearInterval(intervalRef.current);
   }, []);
@@ -136,7 +166,7 @@ const VerificationScreen = ({ email, password, onVerified, onBack }) => {
   }, [resendCooldown]);
 
   const handleCheckNow = async () => {
-    setError('');
+    setError("");
     setChecking(true);
     try {
       const verified = await checkEmailVerified(email, password);
@@ -144,7 +174,9 @@ const VerificationScreen = ({ email, password, onVerified, onBack }) => {
         setSuccess(true);
         setTimeout(() => onVerified(), 1200);
       } else {
-        setError('Email not yet verified. Please click the link in your inbox.');
+        setError(
+          "Email not yet verified. Please click the link in your inbox.",
+        );
       }
     } catch (err) {
       setError(firebaseError(err.code));
@@ -154,7 +186,7 @@ const VerificationScreen = ({ email, password, onVerified, onBack }) => {
   };
 
   const handleResend = async () => {
-    setError('');
+    setError("");
     setResending(true);
     try {
       await resendVerificationEmail(email, password);
@@ -186,7 +218,9 @@ const VerificationScreen = ({ email, password, onVerified, onBack }) => {
         <div className="w-24 h-24 rounded-3xl bg-primary/10 border border-primary/20 flex items-center justify-center">
           <MailCheck className="w-12 h-12 text-primary" />
         </div>
-        <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center text-white text-xs font-bold animate-bounce">1</span>
+        <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center text-white text-xs font-bold animate-bounce">
+          1
+        </span>
       </div>
 
       <div>
@@ -194,17 +228,22 @@ const VerificationScreen = ({ email, password, onVerified, onBack }) => {
         <p className="text-textMuted text-sm max-w-xs leading-relaxed">
           Verification email sent. Please check your inbox.
         </p>
-        <p className="text-primary font-semibold text-sm mt-1 break-all">{email}</p>
+        <p className="text-primary font-semibold text-sm mt-1 break-all">
+          {email}
+        </p>
       </div>
 
       {/* Steps */}
       <div className="w-full text-left space-y-3 bg-white/3 rounded-2xl p-5 border border-white/5">
         {[
-          { step: '1', text: 'Open the email from CareerPath' },
-          { step: '2', text: 'Click the "Verify email address" button' },
-          { step: '3', text: 'Come back here and click the button below' },
+          { step: "1", text: "Open the email from CareerPath" },
+          { step: "2", text: 'Click the "Verify email address" button' },
+          { step: "3", text: "Come back here and click the button below" },
         ].map(({ step, text }) => (
-          <div key={step} className="flex items-center gap-3 text-sm text-textMuted">
+          <div
+            key={step}
+            className="flex items-center gap-3 text-sm text-textMuted"
+          >
             <div className="w-6 h-6 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary text-xs font-bold shrink-0">
               {step}
             </div>
@@ -221,7 +260,13 @@ const VerificationScreen = ({ email, password, onVerified, onBack }) => {
         disabled={checking}
         className="w-full bg-primary hover:bg-primary/90 disabled:opacity-60 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 shadow-lg shadow-primary/25"
       >
-        {checking ? <Loader2 className="w-5 h-5 animate-spin" /> : <><CheckCircle2 className="w-5 h-5" /> I've verified my email</>}
+        {checking ? (
+          <Loader2 className="w-5 h-5 animate-spin" />
+        ) : (
+          <>
+            <CheckCircle2 className="w-5 h-5" /> I've verified my email
+          </>
+        )}
       </button>
 
       {/* Resend + back */}
@@ -237,8 +282,10 @@ const VerificationScreen = ({ email, password, onVerified, onBack }) => {
           disabled={resendCooldown > 0 || resending}
           className="flex items-center gap-1.5 text-primary hover:text-primary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${resending ? 'animate-spin' : ''}`} />
-          {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend email'}
+          <RefreshCw
+            className={`w-3.5 h-3.5 ${resending ? "animate-spin" : ""}`}
+          />
+          {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend email"}
         </button>
       </div>
     </div>
@@ -249,22 +296,22 @@ const VerificationScreen = ({ email, password, onVerified, onBack }) => {
 
 const SignInForm = ({ onSwitch, onSuccess, onVerificationRequired }) => {
   const { signIn, signInWithGoogle } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
     try {
       await signIn(email, password);
       onSuccess?.();
     } catch (err) {
       setError(firebaseError(err.code));
-      if (err.code === 'auth/email-not-verified') {
+      if (err.code === "auth/email-not-verified") {
         // Transition to verification screen so they can resend email
         onVerificationRequired?.(email, password);
       }
@@ -274,7 +321,7 @@ const SignInForm = ({ onSwitch, onSuccess, onVerificationRequired }) => {
   };
 
   const handleGoogle = async () => {
-    setError('');
+    setError("");
     setGoogleLoading(true);
     try {
       await signInWithGoogle();
@@ -293,7 +340,12 @@ const SignInForm = ({ onSwitch, onSuccess, onVerificationRequired }) => {
 
       {/* Email */}
       <div>
-        <label htmlFor="signin-email" className="block text-xs font-medium text-textMuted mb-1.5">Email address</label>
+        <label
+          htmlFor="signin-email"
+          className="block text-xs font-medium text-textMuted mb-1.5"
+        >
+          Email address
+        </label>
         <div className="relative">
           <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-textMuted pointer-events-none" />
           <input
@@ -323,12 +375,23 @@ const SignInForm = ({ onSwitch, onSuccess, onVerificationRequired }) => {
         disabled={loading}
         className="w-full bg-primary hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 shadow-lg shadow-primary/25"
       >
-        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><span>Sign In</span><ArrowRight className="w-4 h-4" /></>}
+        {loading ? (
+          <Loader2 className="w-5 h-5 animate-spin" />
+        ) : (
+          <>
+            <span>Sign In</span>
+            <ArrowRight className="w-4 h-4" />
+          </>
+        )}
       </button>
 
       <p className="text-center text-sm text-textMuted pt-1">
-        Don't have an account?{' '}
-        <button type="button" onClick={onSwitch} className="text-primary hover:text-primary/80 font-semibold transition-colors">
+        Don't have an account?{" "}
+        <button
+          type="button"
+          onClick={onSwitch}
+          className="text-primary hover:text-primary/80 font-semibold transition-colors"
+        >
           Sign up free
         </button>
       </p>
@@ -340,26 +403,27 @@ const SignInForm = ({ onSwitch, onSuccess, onVerificationRequired }) => {
 
 const SignUpForm = ({ onSwitch, onVerificationSent }) => {
   const { signUp, signInWithGoogle } = useAuth();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const strength = (() => {
     if (!password) return null;
-    if (password.length < 6) return 'weak';
-    if (password.length < 10) return 'medium';
-    return 'strong';
+    if (password.length < 6) return "weak";
+    if (password.length < 10) return "medium";
+    return "strong";
   })();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    if (password !== confirm) return setError('Passwords do not match.');
-    if (password.length < 6) return setError('Password must be at least 6 characters.');
+    setError("");
+    if (password !== confirm) return setError("Passwords do not match.");
+    if (password.length < 6)
+      return setError("Password must be at least 6 characters.");
     setLoading(true);
     try {
       await signUp(email, password, name.trim());
@@ -372,7 +436,7 @@ const SignUpForm = ({ onSwitch, onVerificationSent }) => {
   };
 
   const handleGoogle = async () => {
-    setError('');
+    setError("");
     setGoogleLoading(true);
     try {
       await signInWithGoogle();
@@ -391,7 +455,12 @@ const SignUpForm = ({ onSwitch, onVerificationSent }) => {
 
       {/* Name */}
       <div>
-        <label htmlFor="signup-name" className="block text-xs font-medium text-textMuted mb-1.5">Full name</label>
+        <label
+          htmlFor="signup-name"
+          className="block text-xs font-medium text-textMuted mb-1.5"
+        >
+          Full name
+        </label>
         <div className="relative">
           <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-textMuted pointer-events-none" />
           <input
@@ -408,7 +477,12 @@ const SignUpForm = ({ onSwitch, onVerificationSent }) => {
 
       {/* Email */}
       <div>
-        <label htmlFor="signup-email" className="block text-xs font-medium text-textMuted mb-1.5">Email address</label>
+        <label
+          htmlFor="signup-email"
+          className="block text-xs font-medium text-textMuted mb-1.5"
+        >
+          Email address
+        </label>
         <div className="relative">
           <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-textMuted pointer-events-none" />
           <input
@@ -435,15 +509,27 @@ const SignUpForm = ({ onSwitch, onVerificationSent }) => {
         {strength && (
           <div className="mt-2">
             <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
-              <div className={`h-full rounded-full transition-all duration-500 ${
-                strength === 'strong' ? 'bg-green-500 w-full' :
-                strength === 'medium' ? 'bg-yellow-500 w-2/3' : 'bg-red-500 w-1/3'
-              }`} />
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  strength === "strong"
+                    ? "bg-green-500 w-full"
+                    : strength === "medium"
+                      ? "bg-yellow-500 w-2/3"
+                      : "bg-red-500 w-1/3"
+                }`}
+              />
             </div>
-            <p className={`text-xs mt-1 capitalize ${
-              strength === 'strong' ? 'text-green-400' :
-              strength === 'medium' ? 'text-yellow-400' : 'text-red-400'
-            }`}>{strength} password</p>
+            <p
+              className={`text-xs mt-1 capitalize ${
+                strength === "strong"
+                  ? "text-green-400"
+                  : strength === "medium"
+                    ? "text-yellow-400"
+                    : "text-red-400"
+              }`}
+            >
+              {strength} password
+            </p>
           </div>
         )}
       </div>
@@ -458,10 +544,18 @@ const SignUpForm = ({ onSwitch, onVerificationSent }) => {
           placeholder="Re-enter your password"
         />
         {confirm && password && (
-          <p className={`text-xs mt-1.5 flex items-center gap-1 ${confirm === password ? 'text-green-400' : 'text-red-400'}`}>
-            {confirm === password
-              ? <><CheckCircle2 className="w-3.5 h-3.5" /> Passwords match</>
-              : <><AlertCircle className="w-3.5 h-3.5" /> Passwords don't match</>}
+          <p
+            className={`text-xs mt-1.5 flex items-center gap-1 ${confirm === password ? "text-green-400" : "text-red-400"}`}
+          >
+            {confirm === password ? (
+              <>
+                <CheckCircle2 className="w-3.5 h-3.5" /> Passwords match
+              </>
+            ) : (
+              <>
+                <AlertCircle className="w-3.5 h-3.5" /> Passwords don't match
+              </>
+            )}
           </p>
         )}
       </div>
@@ -473,12 +567,23 @@ const SignUpForm = ({ onSwitch, onVerificationSent }) => {
         disabled={loading}
         className="w-full bg-primary hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 shadow-lg shadow-primary/25"
       >
-        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><span>Create Account</span><ArrowRight className="w-4 h-4" /></>}
+        {loading ? (
+          <Loader2 className="w-5 h-5 animate-spin" />
+        ) : (
+          <>
+            <span>Create Account</span>
+            <ArrowRight className="w-4 h-4" />
+          </>
+        )}
       </button>
 
       <p className="text-center text-sm text-textMuted pt-1">
-        Already have an account?{' '}
-        <button type="button" onClick={onSwitch} className="text-primary hover:text-primary/80 font-semibold transition-colors">
+        Already have an account?{" "}
+        <button
+          type="button"
+          onClick={onSwitch}
+          className="text-primary hover:text-primary/80 font-semibold transition-colors"
+        >
           Sign in
         </button>
       </p>
@@ -500,18 +605,30 @@ const BrandPanel = ({ mode }) => (
 
     <div className="relative z-10">
       <h2 className="text-3xl font-bold leading-tight mb-4 whitespace-pre-line">
-        {mode === 'signin' ? 'Welcome\nback 👋' : mode === 'verify' ? 'Almost\nthere! 📬' : 'Start your\njourney 🚀'}
+        {mode === "signin"
+          ? "Welcome\nback 👋"
+          : mode === "verify"
+            ? "Almost\nthere! 📬"
+            : "Start your\njourney 🚀"}
       </h2>
       <p className="text-textMuted text-sm leading-relaxed mb-8">
-        {mode === 'signin'
-          ? 'Sign in to access your personalized career dashboard and recommendations.'
-          : mode === 'verify'
-          ? 'Check your inbox and click the link to complete your account setup.'
-          : 'Join 10,000+ students who found their perfect career path with AI-powered guidance.'}
+        {mode === "signin"
+          ? "Sign in to access your personalized career dashboard and recommendations."
+          : mode === "verify"
+            ? "Check your inbox and click the link to complete your account setup."
+            : "Join 10,000+ students who found their perfect career path with AI-powered guidance."}
       </p>
       <ul className="space-y-3">
-        {['AI-powered subject recommendations', 'Personalized college shortlisting', 'Career outcome insights', 'Free scholarship alerts'].map((item) => (
-          <li key={item} className="flex items-center gap-3 text-sm text-textMuted">
+        {[
+          "AI-powered subject recommendations",
+          "Personalized college shortlisting",
+          "Career outcome insights",
+          "Free scholarship alerts",
+        ].map((item) => (
+          <li
+            key={item}
+            className="flex items-center gap-3 text-sm text-textMuted"
+          >
             <div className="w-5 h-5 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0">
               <CheckCircle2 className="w-3 h-3 text-primary" />
             </div>
@@ -520,27 +637,29 @@ const BrandPanel = ({ mode }) => (
         ))}
       </ul>
     </div>
-    <p className="relative z-10 text-xs text-textMuted">© 2026 CareerPath. All rights reserved.</p>
+    <p className="relative z-10 text-xs text-textMuted">
+      © 2026 CareerPath. All rights reserved.
+    </p>
   </div>
 );
 
 // ─── Auth Page (container) ────────────────────────────────────────────────────
 
-const AuthPage = ({ defaultMode = 'signin', onSuccess, onClose }) => {
+const AuthPage = ({ defaultMode = "signin", onSuccess, onClose }) => {
   // mode: 'signin' | 'signup' | 'verify'
   const [mode, setMode] = useState(defaultMode);
-  const [verifyData, setVerifyData] = useState({ email: '', password: '' });
+  const [verifyData, setVerifyData] = useState({ email: "", password: "" });
 
   const handleVerificationSent = (email, password) => {
     setVerifyData({ email, password });
-    setMode('verify');
+    setMode("verify");
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
       <div
-        className="w-full max-w-5xl grid md:grid-cols-2 rounded-3xl overflow-hidden shadow-2xl border border-white/10"
-        style={{ maxHeight: '90vh' }}
+        className="w-full max-w-5xl grid md:grid-cols-2 rounded-3xl overflow-y-scroll shadow-2xl border border-white/10 hide-scrollbar"
+        style={{ maxHeight: "90vh" }}
       >
         {/* Branding */}
         <BrandPanel mode={mode} />
@@ -563,39 +682,43 @@ const AuthPage = ({ defaultMode = 'signin', onSuccess, onClose }) => {
             )}
           </div>
 
-          {mode !== 'verify' && (
+          {mode !== "verify" && (
             <div className="mb-6 md:mt-4">
               <h1 className="text-2xl md:text-3xl font-bold mb-1">
-                {mode === 'signin' ? 'Sign in to your account' : 'Create your account'}
+                {mode === "signin"
+                  ? "Sign in to your account"
+                  : "Create your account"}
               </h1>
               <p className="text-textMuted text-sm">
-                {mode === 'signin' ? 'Enter your credentials below' : 'Fill in your details to get started'}
+                {mode === "signin"
+                  ? "Enter your credentials below"
+                  : "Fill in your details to get started"}
               </p>
             </div>
           )}
 
-          {mode === 'signin' && (
+          {mode === "signin" && (
             <SignInForm
-              onSwitch={() => setMode('signup')}
+              onSwitch={() => setMode("signup")}
               onSuccess={onSuccess}
               onVerificationRequired={handleVerificationSent}
             />
           )}
 
-          {mode === 'signup' && (
+          {mode === "signup" && (
             <SignUpForm
-              onSwitch={() => setMode('signin')}
+              onSwitch={() => setMode("signin")}
               onVerificationSent={handleVerificationSent}
             />
           )}
 
-          {mode === 'verify' && (
+          {mode === "verify" && (
             <div className="md:mt-4">
               <VerificationScreen
                 email={verifyData.email}
                 password={verifyData.password}
                 onVerified={onSuccess}
-                onBack={() => setMode('signup')}
+                onBack={() => setMode("signup")}
               />
             </div>
           )}
