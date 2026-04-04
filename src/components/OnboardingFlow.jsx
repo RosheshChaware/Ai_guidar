@@ -1,6 +1,10 @@
 import React, { useState, useRef, useCallback } from "react";
 import { db } from "../firebase";
 import { doc, setDoc, collection } from "firebase/firestore";
+import React, { useState, useRef, useCallback } from 'react';
+import { db } from '../firebase';
+import { doc, setDoc, collection } from 'firebase/firestore';
+import { GraduationCap, Brain, Clock, BarChart2 } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────
 //  Inline SVG Icons
@@ -231,6 +235,10 @@ const STEPS = [
     subtitle: "Your recent scores and test results",
     icon: "📊",
   },
+  { id: 1, title: 'Academic Profile',   subtitle: 'Tell us your class, stream, and goals',              icon: GraduationCap },
+  { id: 2, title: 'Strengths & Gaps',   subtitle: 'Where you shine and where you struggle',             icon: Brain },
+  { id: 3, title: 'Study Habits',       subtitle: 'How and when you study best',                        icon: Clock },
+  { id: 4, title: 'Performance Data',   subtitle: 'Your recent scores and test results',                icon: BarChart2 },
 ];
 
 // ─────────────────────────────────────────────────────────────
@@ -260,6 +268,12 @@ const Select = ({ label, value, onChange, options, placeholder }) => (
             {o}
           </option>
         ))}
+      <select value={value} onChange={e => onChange(e.target.value)}
+        style={{ colorScheme: 'dark' }}
+        className="w-full bg-[#111827] border border-[#1f2937] rounded-xl px-4 py-3.5 text-sm text-gray-200 appearance-none
+          focus:outline-none focus:border-indigo-500/50 hover:border-[#374151] transition-all cursor-pointer">
+        <option value="" disabled style={{ background: '#111827', color: '#9ca3af' }}>{placeholder || 'Select...'}</option>
+        {options.map(o => <option key={o} value={o} style={{ background: '#111827', color: '#e5e7eb' }}>{o}</option>)}
       </select>
       <svg
         className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none"
@@ -603,8 +617,22 @@ const OnboardingFlow = ({ onComplete, onClose, userId }) => {
       });
 
       const DEV_MODE = true;
+      let res;
+      let errBody = {};
+      try {
+        res = await fetch('http://localhost:5000/api/v1/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ inputData: enrichedData }),
+        });
+        if (!res.ok) errBody = await res.json().catch(() => ({}));
+      } catch (networkErr) {
+        // Network error (server offline)
+        res = { ok: false, status: 'Network Error' };
+        errBody = { error: 'Failed to fetch (Server might be offline)' };
+      }
+      
       if (!res.ok) {
-        const errBody = await res.json().catch(() => ({}));
         console.error(`[API ERROR /analyze] Status: ${res.status}`, errBody);
 
         if (DEV_MODE) {
@@ -660,6 +688,10 @@ const OnboardingFlow = ({ onComplete, onClose, userId }) => {
             sessionId,
             uid,
           });
+          
+          localStorage.setItem(`onboarding_complete_${uid}`, 'true');
+          localStorage.setItem('userProfile', JSON.stringify({ goal: enrichedData.targetGoal }));
+          onComplete({ aiOutput: mockOutput, inputData: enrichedData, sessionId, uid });
           return;
         }
 
@@ -672,6 +704,8 @@ const OnboardingFlow = ({ onComplete, onClose, userId }) => {
       await new Promise((r) => setTimeout(r, 600));
 
       localStorage.setItem(`onboarding_complete_${uid}`, "true");
+      localStorage.setItem(`onboarding_complete_${uid}`, 'true');
+      localStorage.setItem('userProfile', JSON.stringify({ goal: enrichedData.targetGoal }));
       onComplete({ aiOutput, inputData: enrichedData, sessionId, uid });
 
       // Background Firestore save
@@ -752,6 +786,16 @@ const OnboardingFlow = ({ onComplete, onClose, userId }) => {
                   }`}
                 >
                   {done ? <CheckIcon /> : s.icon}
+                  active  ? 'bg-indigo-500/10 border border-indigo-500/30 shadow-inner text-white' :
+                  done    ? 'bg-[#1f2937]/30 border border-transparent text-gray-400 hover:bg-[#1f2937]/50' :
+                  'text-gray-600 cursor-default border border-transparent'
+                }`}>
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border transition-all ${
+                  done   ? 'bg-green-500/10 border-green-500/20 text-green-400' :
+                  active ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-400' :
+                  'bg-white/5 border-transparent text-gray-600'
+                }`}>
+                  {done ? <CheckIcon /> : <s.icon size={18} strokeWidth={1.8} />}
                 </div>
                 <div className="min-w-0">
                   <p
